@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
     - name: Checkout code
@@ -43,5 +44,5 @@ jobs:
           GO_VERSION=${{ vars.GO_VERSION }}
           SURICATA_VERSION=${{ vars.SURICATA_VERSION }}
 
-    - name: Post build info
+    - name: Post build inf
       run: echo "Docker image for mirroring built and pushed with tags ${{ steps.meta.outputs.tags }}"
