@@ -7,21 +7,20 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 )
 
 const (
-	imageName     string = "getastra/proxy"           // Replace with your Docker image name
-	containerName string = "astra-proxy-service"      // Replace with your container name
-	lockFilePath  string = "/tmp/astra-cli-tool.lock" // Path for the lock file
+	imageName     string = "getastra/proxy"      // Replace with your Docker image name
+	containerName string = "astra-proxy-service" // Replace with your container name
+	//lockFilePath  string = "apis-cli.lock" // can't use OS specific path. Path for the lock file
 
 	EntryPointArgIdentifier string = "--entrypoint"
 )
 
 var (
-	lockFile       *os.File
+	//lockFile *flock.Flock
 	entryPointArgs []string
 )
 
@@ -36,28 +35,35 @@ func checkDockerAvailability() {
 	}
 }
 
+/*
 // ensureSingleInstance ensures only one instance of the CLI is running using a file lock
 func ensureSingleInstance() {
-	var err error
-	lockFile, err = os.OpenFile(lockFilePath, os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		log.Fatalf("Failed to create/open lock file: %v", err)
-	}
+	// Initialize the lock
+	lockFile = flock.New(lockFilePath)
 
-	// Try to obtain an exclusive lock
-	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	// Try to acquire the lock
+	locked, err := lockFile.TryLock()
 	if err != nil {
+		log.Fatalf("Failed to acquire lock: %v", err)
+	}
+	if !locked {
 		log.Fatalf("Another instance of the CLI tool is already running.")
 	}
+	log.Println("Lock acquired successfully.")
 }
 
-// releaseLock releases the file lock and closes the file
+// releaseLock releases the file lock
 func releaseLock() {
 	if lockFile != nil {
-		syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-		lockFile.Close()
+		err := lockFile.Unlock()
+		if err != nil {
+			log.Printf("Failed to release lock: %v", err)
+		} else {
+			log.Println("Lock released successfully.")
+		}
 	}
 }
+*/
 
 // quickStartContainer starts the Docker container with the provided flags
 func quickStartContainer(flags []string) {
@@ -270,8 +276,8 @@ func main() {
 	checkDockerAvailability()
 
 	// Ensure single instance using file lock
-	ensureSingleInstance()
-	defer releaseLock() // Release the lock when the program exits
+	// ensureSingleInstance()
+	// defer releaseLock() // Release the lock when the program exits
 
 	var rootCmd = &cobra.Command{
 		Use:   "cli-tool",
