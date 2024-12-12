@@ -76,7 +76,7 @@ jobs:
         prerelease: false
         repository: https://github.com/dharrsan-18/astra-cli-artifacts
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_REPO }}
 
     - name: Update Latest Release in Another Repository
       uses: softprops/action-gh-release@v1
@@ -88,4 +88,4 @@ jobs:
         prerelease: false
         repository: https://github.com/dharrsan-18/astra-cli-artifacts
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_REPO }}
