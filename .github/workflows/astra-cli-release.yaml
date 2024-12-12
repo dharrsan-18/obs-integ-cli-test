@@ -46,13 +46,13 @@ jobs:
         CGO_ENABLED: 0
       run: |
         cd integrations/astra-cli
-        go build -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+        go build -o apis-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
         name: binaries
-        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+        path: integrations/astra-cli/apis-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
   release:
     needs: build
@@ -74,7 +74,7 @@ jobs:
         name: Astra CLI ${{ github.ref_name }}
         draft: false
         prerelease: false
-        repository: dharrsan-18/astra-cli-artifacts
+        repository: getastra/astra-api-security-cli
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_REPO }}
 
@@ -86,6 +86,6 @@ jobs:
         name: Latest Astra CLI Release
         draft: false
         prerelease: false
-        repository: dharrsan-18/astra-cli-artifacts
+        repository: getastra/astra-api-security-cli
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_REPO }}
