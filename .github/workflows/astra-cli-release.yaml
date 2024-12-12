@@ -71,7 +71,7 @@ jobs:
       with:
         files: binaries/*
         tag_name: ${{ github.ref }}
-        name: Astra CLI ${{ github.ref_name }}
+        name: ${{ github.ref_name }}
         draft: false
         prerelease: false
         repository: getastra/astra-api-security-cli
@@ -83,7 +83,7 @@ jobs:
       with:
         files: binaries/*
         tag_name: latest
-        name: Latest Astra CLI Release
+        name: apis-cli-latest
         draft: false
         prerelease: false
         repository: getastra/astra-api-security-cli
