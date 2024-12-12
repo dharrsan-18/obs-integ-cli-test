@@ -1,0 +1,83 @@
+name: Build and Release Astra CLI
+
+on:
+  push:
+    tags:
+      - 'astra-cli-*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            ext: ""
+          - os: linux
+            arch: arm64
+            ext: ""
+          - os: windows
+            arch: amd64
+            ext: ".exe"
+          - os: windows
+            arch: arm64
+            ext: ".exe"
+          - os: darwin
+            arch: amd64
+            ext: ""
+          - os: darwin
+            arch: arm64
+            ext: ""
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23.3'
+
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/astra-cli-}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Build
+      env:
+        GOOS: ${{ matrix.os }}
+        GOARCH: ${{ matrix.arch }}
+      run: |
+        cd integrations/astra-cli
+        go build -o astra-cli${{ matrix.ext }}
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Astra CLI ${{ steps.get_version.outputs.version }}
+        draft: false
+        prerelease: false
+        files: |
+          integrations/astra-cli/astra-cli${{ matrix.ext }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Rename and Upload Binary
+      run: |
+        cd integrations/astra-cli
+        BINARY_NAME="astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}"
+        mv astra-cli${{ matrix.ext }} $BINARY_NAME
+        
+        # Upload to version-specific directory
+        gh release upload "astra-cli-${{ steps.get_version.outputs.version }}" $BINARY_NAME
+        
+        # Upload to latest directory (overwrite if exists)
+        gh release upload "astra-cli-${{ steps.get_version.outputs.version }}" $BINARY_NAME --clobber
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
