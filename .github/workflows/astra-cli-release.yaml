@@ -17,54 +17,27 @@ jobs:
           - os: linux
             arch: amd64
             ext: ""
-            build_tags: ""
           - os: linux
             arch: arm64
             ext: ""
-            build_tags: ""
           - os: windows
             arch: amd64
             ext: ".exe"
-            build_tags: "windows"  # Add windows build tag
-            build_flags: "-tags windows"
           - os: windows
             arch: arm64
             ext: ".exe"
-            build_tags: "windows"  # Add windows build tag
-            build_flags: "-tags windows"
           - os: darwin
             arch: amd64
             ext: ""
-            build_tags: ""
           - os: darwin
             arch: arm64
             ext: ""
-            build_tags: ""
-
     steps:
     - uses: actions/checkout@v4
     
     - uses: actions/setup-go@v4
       with:
         go-version: '1.23.3'
-
-    # Create temporary file with build constraints for Windows
-    - name: Setup Windows Build
-      if: matrix.os == 'windows'
-      run: |
-        echo '//go:build windows
-        // +build windows
-        
-        package main
-        
-        import "syscall"
-        
-        var (
-            syscallFlock = func(fd int, how int) (err error) { return nil }
-            LOCK_EX = 0
-            LOCK_NB = 0
-            LOCK_UN = 0
-        )' > integrations/astra-cli/syscall_windows.go
 
     - name: Build
       env:
@@ -73,7 +46,7 @@ jobs:
         CGO_ENABLED: 0
       run: |
         cd integrations/astra-cli
-        go build ${{ matrix.build_flags }} -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+        go build -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
