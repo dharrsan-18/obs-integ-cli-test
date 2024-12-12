@@ -66,28 +66,26 @@ jobs:
         name: binaries
         path: binaries
 
-    - name: Clone Public Release Repository
-      run: |
-        git clone https://github.com/dharrsan-18/astra-cli-artifacts.git public-repo
-        cd public-repo
-        # Check if the main branch exists, if not, create it
-        if [ -z "$(git branch --list main)" ]; then
-          git checkout --orphan main
-          git rm -rf .
-          touch .gitkeep
-          git add .gitkeep
-          git commit -m "Initialize main branch"
-          git push origin main
-        else
-          git checkout main
-        fi
+    - name: Create Version Release in Another Repository
+      uses: softprops/action-gh-release@v1
+      with:
+        files: binaries/*
+        tag_name: ${{ github.ref }}
+        name: Astra CLI ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        repo: dharrsan-18/astra-cli-artifacts
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Copy Artifacts to Public Repo
-      run: |
-        cp binaries/* public-repo/
-        cd public-repo
-        git add .
-        git commit -m "Release ${{ github.ref_name }}"
-        git push origin main
+    - name: Update Latest Release in Another Repository
+      uses: softprops/action-gh-release@v1
+      with:
+        files: binaries/*
+        tag_name: latest
+        name: Latest Astra CLI Release
+        draft: false
+        prerelease: false
+        repo: dharrsan-18/astra-cli-artifacts
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
