@@ -70,7 +70,17 @@ jobs:
       run: |
         git clone https://github.com/dharrsan-18/astra-cli-artifacts.git public-repo
         cd public-repo
-        git checkout main
+        # Check if the main branch exists, if not, create it
+        if [ -z "$(git branch --list main)" ]; then
+          git checkout --orphan main
+          git rm -rf .
+          touch .gitkeep
+          git add .gitkeep
+          git commit -m "Initialize main branch"
+          git push origin main
+        else
+          git checkout main
+        fi
 
     - name: Copy Artifacts to Public Repo
       run: |
