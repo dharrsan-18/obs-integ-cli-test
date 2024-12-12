@@ -66,24 +66,18 @@ jobs:
         name: binaries
         path: binaries
 
-    - name: Create Version Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: binaries/*
-        tag_name: ${{ github.ref }}
-        name: Astra CLI ${{ github.ref_name }}
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Clone Public Release Repository
+      run: |
+        git clone https://github.com/dharrsan-18/astra-cli-artifacts.git public-repo
+        cd public-repo
+        git checkout main
 
-    - name: Update Latest Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: binaries/*
-        tag_name: latest
-        name: Latest Astra CLI Release
-        draft: false
-        prerelease: false
+    - name: Copy Artifacts to Public Repo
+      run: |
+        cp binaries/* public-repo/
+        cd public-repo
+        git add .
+        git commit -m "Release ${{ github.ref_name }}"
+        git push origin main
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
