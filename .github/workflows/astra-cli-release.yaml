@@ -55,29 +55,29 @@ jobs:
         cd integrations/astra-cli
         go build -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: astra-cli-${{ matrix.os }}-${{ matrix.arch }}
+        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: astra-cli-${{ matrix.os }}-${{ matrix.arch }}
+        path: binaries
+
     - name: Create Release
-      id: create_release
       uses: softprops/action-gh-release@v1
       with:
-        name: Astra CLI ${{ steps.get_version.outputs.version }}
+        name: Astra CLI ${{ needs.build.outputs.version }}
         draft: false
         prerelease: false
-        files: |
-          integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+        files: binaries/*
         generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Rename and Upload Binary
-      run: |
-        cd integrations/astra-cli
-        BINARY_NAME="astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}"
-        mv astra-cli${{ matrix.ext }} $BINARY_NAME
-        
-        # Upload to version-specific directory
-        gh release upload "astra-cli-${{ steps.get_version.outputs.version }}" $BINARY_NAME
-        
-        # Upload to latest directory (overwrite if exists)
-        gh release upload "astra-cli-${{ steps.get_version.outputs.version }}" $BINARY_NAME --clobber
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
