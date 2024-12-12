@@ -6,11 +6,12 @@ on:
       - 'astra-cli-*'
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: linux
@@ -39,54 +40,30 @@ jobs:
       with:
         go-version: '1.23.3'
 
-    - name: Extract version
-      id: get_version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/astra-cli-}
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-
     - name: Build
       env:
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
+        CGO_ENABLED: 0
       run: |
         cd integrations/astra-cli
         go build -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: binaries
-        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-    - name: Download All Artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: binaries
-        path: binaries
-
-    - name: Create Release
+    - name: Create Version Release
       uses: softprops/action-gh-release@v1
       with:
-        files: binaries/*
+        files: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
         tag_name: ${{ github.ref }}
         name: Astra CLI ${{ github.ref_name }}
         draft: false
         prerelease: false
-        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Update Latest Tag
+    - name: Update Latest Release
       uses: softprops/action-gh-release@v1
       with:
-        files: binaries/*
+        files: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
         tag_name: latest
         name: Latest Astra CLI Release
         draft: false
