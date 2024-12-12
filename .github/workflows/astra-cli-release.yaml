@@ -6,7 +6,7 @@ on:
       - 'astra-cli-*'
 
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -32,7 +32,6 @@ jobs:
           - os: darwin
             arch: arm64
             ext: ""
-
     steps:
     - uses: actions/checkout@v4
     
@@ -49,10 +48,28 @@ jobs:
         cd integrations/astra-cli
         go build -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: binaries
+        path: binaries
+
     - name: Create Version Release
       uses: softprops/action-gh-release@v1
       with:
-        files: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+        files: binaries/*
         tag_name: ${{ github.ref }}
         name: Astra CLI ${{ github.ref_name }}
         draft: false
@@ -63,7 +80,7 @@ jobs:
     - name: Update Latest Release
       uses: softprops/action-gh-release@v1
       with:
-        files: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+        files: binaries/*
         tag_name: latest
         name: Latest Astra CLI Release
         draft: false
