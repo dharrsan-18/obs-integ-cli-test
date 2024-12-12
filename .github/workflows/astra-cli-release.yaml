@@ -53,7 +53,7 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: |
         cd integrations/astra-cli
-        go build -o astra-cli${{ matrix.ext }}
+        go build -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
     - name: Create Release
       id: create_release
@@ -63,7 +63,7 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          integrations/astra-cli/astra-cli${{ matrix.ext }}
+          integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
