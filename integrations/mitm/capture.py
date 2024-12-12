@@ -130,8 +130,8 @@ class Worker(threading.Thread):
             resp_headers_dict = dict(flow.response.headers)
             span.set_attribute("http.request.headers", json.dumps(req_headers_dict))
             span.set_attribute("http.response.headers", json.dumps(resp_headers_dict))
-            span.set_attribute("http.request.body", str(flow.request.content))
-            span.set_attribute("http.response.body", str(flow.response.content))
+            span.set_attribute("http.request.body", str(flow.request.content.decode('utf-8')) if flow.request.content else "")
+            span.set_attribute("http.response.body", str(flow.response.content.decode('utf-8')) if flow.response.content else "")
 
             logger.info("\n")
             logger.info("===================================================================")
