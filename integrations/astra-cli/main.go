@@ -6,15 +6,14 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 const (
-	imageName     string = "getastra/proxy-" + runtime.GOARCH // Replace with your Docker image name
-	containerName string = "astra-proxy-service"              // Replace with your container name
+	imageName     string = "getastra/proxy"      // Replace with your Docker image name
+	containerName string = "astra-proxy-service" // Replace with your container name
 	//lockFilePath  string = "apis-cli.lock" // can't use OS specific path. Path for the lock file
 
 	EntryPointArgIdentifier string = "--entrypoint"
