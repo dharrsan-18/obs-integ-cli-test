@@ -20,7 +20,7 @@ def filter_allowed_hosts(hosts):
 ALLOWED_HOSTS = filter_allowed_hosts(os.getenv("ALLOWED_HOSTS", "").split(","))
 NUM_WORKERS = int(os.getenv("NUM_WORKERS", 5))
 WORK_QUEUE_SIZE = int(os.getenv("WORK_QUEUE_SIZE", 100))
-OTEL_EXPORTER_ENDPOINT = os.getenv("OTEL_EXPORTER_ENDPOINT", "localhost:4317")
+OTEL_EXPORTER_ENDPOINT = os.getenv("ASTRA_TRAFFIC_COLLECTOR_ENDPOINT", "localhost:4317")
 TRACE_RATIO = float(os.getenv("TRACE_RATIO", 1.0))
 MAX_BODY_SIZE_IN_BYTES = 1048576
 SENSOR_ID = os.getenv("SENSOR_ID")
@@ -130,8 +130,8 @@ class Worker(threading.Thread):
             resp_headers_dict = dict(flow.response.headers)
             span.set_attribute("http.request.headers", json.dumps(req_headers_dict))
             span.set_attribute("http.response.headers", json.dumps(resp_headers_dict))
-            span.set_attribute("http.request.body", str(flow.request.content))
-            span.set_attribute("http.response.body", str(flow.response.content))
+            span.set_attribute("http.request.body", str(flow.request.content.decode('utf-8')) if flow.request.content else "")
+            span.set_attribute("http.response.body", str(flow.response.content.decode('utf-8')) if flow.response.content else "")
 
             logger.info("\n")
             logger.info("===================================================================")

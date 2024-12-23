@@ -62,7 +62,7 @@ Modify these values as needed and save them in the `.env` file.
 
 Run the container with the following command:
 ```bash
-docker run -itd --net=host --cap-add=NET_ADMIN \
+docker run -itd --net=host \
   -v <path>/mirror-settings.json:/root/obs-integ/mirror-settings.json \
   --env-file=<envPath> \
   --name <container-name> \
