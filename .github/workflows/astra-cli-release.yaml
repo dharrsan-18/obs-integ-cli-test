@@ -63,7 +63,7 @@ jobs:
         name: ${{ github.ref_name }}
         draft: false
         prerelease: false
-        repository: getastra/obs-deployments
+        repository: https://github.com/dharrsan-18/astra-cli-artifacts
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_REPO }}
 
