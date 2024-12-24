@@ -7,21 +7,19 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 )
 
 const (
-	imageName     string = "getastra/proxy"           // Replace with your Docker image name
-	containerName string = "astra-proxy-service"      // Replace with your container name
-	lockFilePath  string = "/tmp/astra-cli-tool.lock" // Path for the lock file
+	imageName     string = "getastra/proxy"      // Replace with your Docker image name
+	containerName string = "astra-proxy-service" // Replace with your container name
+	//lockFilePath  string = "apis-cli.lock" // can't use OS specific path. Path for the lock file
 
 	EntryPointArgIdentifier string = "--entrypoint"
 )
 
 var (
-	lockFile       *os.File
 	entryPointArgs []string
 )
 
@@ -33,29 +31,6 @@ func checkDockerAvailability() {
 		log.Println("Please ensure Docker is installed and available in your PATH.")
 		log.Println("For installation instructions, visit: https://docs.docker.com/engine/install/")
 		os.Exit(1)
-	}
-}
-
-// ensureSingleInstance ensures only one instance of the CLI is running using a file lock
-func ensureSingleInstance() {
-	var err error
-	lockFile, err = os.OpenFile(lockFilePath, os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		log.Fatalf("Failed to create/open lock file: %v", err)
-	}
-
-	// Try to obtain an exclusive lock
-	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-	if err != nil {
-		log.Fatalf("Another instance of the CLI tool is already running.")
-	}
-}
-
-// releaseLock releases the file lock and closes the file
-func releaseLock() {
-	if lockFile != nil {
-		syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-		lockFile.Close()
 	}
 }
 
@@ -213,19 +188,6 @@ func pullLatestImage(_ []string) {
 	*/
 }
 
-/*
-// upgradeContainer checks for a new image, pulls it.
-func upgradeContainer(flags []string) {
-		if checkAndPullLatestImage() {
-			log.Println("Image pulled successfully. Stopping and restarting container...")
-			stopContainer()
-			startContainer(flags)
-		} else {
-			log.Println("No upgrade needed. The container is already running the latest version.")
-		}
-}
-*/
-
 // streamLogs streams the Docker container logs
 func streamLogs(flags []string) {
 	args := append([]string{"logs"}, flags...)
@@ -268,10 +230,6 @@ func removeContainer() {
 
 func main() {
 	checkDockerAvailability()
-
-	// Ensure single instance using file lock
-	ensureSingleInstance()
-	defer releaseLock() // Release the lock when the program exits
 
 	var rootCmd = &cobra.Command{
 		Use:   "cli-tool",
