@@ -1,5 +1,3 @@
-name: Build and Release Astra CLI
-
 on:
   push:
     tags:
@@ -11,73 +9,58 @@ jobs:
     permissions:
       contents: write
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          - os: linux
-            arch: amd64
-            ext: ""
-          - os: linux
-            arch: arm64
-            ext: ""
-          - os: windows
-            arch: amd64
-            ext: ".exe"
-          - os: windows
-            arch: arm64
-            ext: ".exe"
-          - os: darwin
-            arch: amd64
-            ext: ""
-          - os: darwin
-            arch: arm64
-            ext: ""
-
+        os: [linux, windows, darwin]
+        arch: [amd64, arm64]
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-go@v4
       with:
         go-version: '1.23.3'
-
-    - name: Extract version from tag
-      id: get_version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/astra-cli-}
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Build
       env:
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.arch }}
+        CGO_ENABLED: 0
       run: |
         cd integrations/astra-cli
-        go build -o astra-cli${{ matrix.ext }}
+        ext=""
+        # Only Windows needs the ".exe" extension
+        if [[ "${{ matrix.os }}" == "windows" ]]; then
+          ext=".exe"
+        fi
+        go build -o astra-cli-${{ matrix.os }}-${{ matrix.arch }}${ext}
 
-    - name: Create Release
-      id: create_release
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${ext}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: binaries
+        path: binaries
+
+    - name: Create Version Release
       uses: softprops/action-gh-release@v1
       with:
-        name: Astra CLI ${{ steps.get_version.outputs.version }}
+        files: binaries/*
+        tag_name: ${{ github.ref }}  # Versioned release tag
+        name: ${{ github.ref_name }} # Use the tag name as the release name
         draft: false
         prerelease: false
-        files: |
-          integrations/astra-cli/astra-cli${{ matrix.ext }}
-        generate_release_notes: true
+        repository: getastra/obs-deployments
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_REPO }}
 
-    - name: Rename and Upload Binary
-      run: |
-        cd integrations/astra-cli
-        BINARY_NAME="astra-cli-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}"
-        mv astra-cli${{ matrix.ext }} $BINARY_NAME
-        
-        # Upload to version-specific directory
-        gh release upload "astra-cli-${{ steps.get_version.outputs.version }}" $BINARY_NAME
-        
-        # Upload to latest directory (overwrite if exists)
-        gh release upload "astra-cli-${{ steps.get_version.outputs.version }}" $BINARY_NAME --clobber
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
