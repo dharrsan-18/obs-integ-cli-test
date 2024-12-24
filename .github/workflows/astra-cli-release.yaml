@@ -58,7 +58,7 @@ jobs:
     - name: Create Version Release
       uses: softprops/action-gh-release@v1
       with:
-        files: binaries/*
+        files: binaries/**/*
         tag_name: ${{ github.ref_name }}  # Clean tag name
         name: ${{ github.ref_name }}
         draft: false
