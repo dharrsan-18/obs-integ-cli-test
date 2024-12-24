@@ -39,8 +39,9 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: astra-cli-${{ matrix.os }}-${{ matrix.arch }}${ext}
-        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${ext}
+        # Use a consistent and clean artifact name
+        name: astra-cli-${{ matrix.os }}-${{ matrix.arch }}
+        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}*
 
   release:
     needs: build
@@ -48,11 +49,11 @@ jobs:
     permissions:
       contents: write
     steps:
-    - name: Download Artifacts
+    - name: Download All Artifacts
       uses: actions/download-artifact@v3
       with:
-        name: astra-cli-${{ matrix.os }}-${{ matrix.arch }}${ext}
-        path: binaries
+        # Download all artifacts uploaded in the build job
+        path: binaries/
 
     - name: Create Version Release
       uses: softprops/action-gh-release@v1
@@ -65,3 +66,4 @@ jobs:
         repository: getastra/obs-deployments
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_REPO }}
+
