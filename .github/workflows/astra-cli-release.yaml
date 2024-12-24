@@ -53,7 +53,7 @@ jobs:
         path: binaries/
 
     - name: Verify Artifacts
-      run: ls -R binaries
+      run: ls  binaries
 
     - name: Create Version Release
       uses: softprops/action-gh-release@v1
