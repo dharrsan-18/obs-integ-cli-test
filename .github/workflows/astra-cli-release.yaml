@@ -30,7 +30,6 @@ jobs:
       run: |
         cd integrations/astra-cli
         ext=""
-        # Only Windows needs the ".exe" extension
         if [[ "${{ matrix.os }}" == "windows" ]]; then
           ext=".exe"
         fi
@@ -39,8 +38,8 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: binaries
-        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}${ext}
+        name: astra-cli-${{ matrix.os }}-${{ matrix.arch }}
+        path: integrations/astra-cli/astra-cli-${{ matrix.os }}-${{ matrix.arch }}*
 
   release:
     needs: build
@@ -48,18 +47,20 @@ jobs:
     permissions:
       contents: write
     steps:
-    - name: Download Artifacts
+    - name: Download All Artifacts
       uses: actions/download-artifact@v3
       with:
-        name: binaries
-        path: binaries
+        path: binaries/
+
+    - name: Verify Artifacts
+      run: ls  binaries
 
     - name: Create Version Release
       uses: softprops/action-gh-release@v1
       with:
-        files: binaries/*
-        tag_name: ${{ github.ref }}  # Versioned release tag
-        name: ${{ github.ref_name }} # Use the tag name as the release name
+        files: binaries/**/*
+        tag_name: ${{ github.ref_name }}  # Clean tag name
+        name: ${{ github.ref_name }}
         draft: false
         prerelease: false
         repository: getastra/obs-deployments
