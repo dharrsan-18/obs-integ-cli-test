@@ -51,7 +51,7 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v3
       with:
-        name: binaries
+        name: astra-cli-${{ matrix.os }}-${{ matrix.arch }}${ext}
         path: binaries
 
     - name: Create Version Release
