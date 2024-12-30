@@ -13,7 +13,7 @@ import (
 )
 
 type SuricataConfig struct {
-	NetworkInterface      string   `json:"network-interface"`
+	NetworkInterface      []string `json:"network-interface"`
 	SensorID              string   `json:"sensor-id"`
 	OtelCollectorEndpoint string   `json:"otel-collector-endpoint"`
 	AcceptHosts           []string `json:"accept-hosts"`

@@ -11,26 +11,22 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"text/template"
 )
 
 const originalSuricataYamlPath string = "/root/obs-integ/suricata.yaml"
 const tempSuricataYamlPath string = "/root/obs-integ/temp-suricata.yaml"
 
-func getFirstNonLoopbackInterface() (string, error) {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		slog.Error("Failed to get network interfaces", "error", err)
-		return "", err
-	}
+// Define a template to append the af-packet section dynamically
+const afPacketTemplate = `
+af-packet:
+{{range .Interfaces}}
+  - interface: {{.}}
+    cluster-type: cluster_flow
+{{end}}
+`
 
-	for _, iface := range interfaces {
-		if iface.Flags&net.FlagLoopback == 0 && iface.Flags&net.FlagUp != 0 {
-			return iface.Name, nil
-		}
-	}
-	return "", fmt.Errorf("no suitable network interface found")
-}
-
+// copySuricataConfig copies the original Suricata config to a temporary file
 func copySuricataConfig() error {
 	srcFile, err := os.Open(originalSuricataYamlPath)
 	if err != nil {
@@ -65,7 +61,8 @@ func copySuricataConfig() error {
 	return nil
 }
 
-func updateSuricataConfig(iface string) error {
+// updateSuricataConfig updates Suricata's config with dynamically added af-packet section
+func updateSuricataConfig(interfaces []string) error {
 	content, err := os.ReadFile(tempSuricataYamlPath)
 	if err != nil {
 		slog.Error("Failed to read temporary Suricata config",
@@ -74,7 +71,29 @@ func updateSuricataConfig(iface string) error {
 		return fmt.Errorf("error reading temp-suricata.yaml: %v", err)
 	}
 
-	updatedContent := strings.ReplaceAll(string(content), "${NETWORK_INTERFACE}", iface)
+	// Prepare af-packet section using a template
+	tmpl, err := template.New("afPacket").Parse(afPacketTemplate)
+	if err != nil {
+		slog.Error("Failed to parse af-packet template", "error", err)
+		return fmt.Errorf("error parsing af-packet template: %v", err)
+	}
+
+	// Prepare the data for the template
+	data := struct {
+		Interfaces []string
+	}{
+		Interfaces: interfaces,
+	}
+
+	// Create a temporary buffer to hold the generated af-packet section
+	var afPacketContent strings.Builder
+	if err := tmpl.Execute(&afPacketContent, data); err != nil {
+		slog.Error("Failed to execute af-packet template", "error", err)
+		return fmt.Errorf("error executing af-packet template: %v", err)
+	}
+
+	// Dynamically append the generated af-packet section to the Suricata config
+	updatedContent := strings.ReplaceAll(string(content), "# af-packet-section-placeholder", afPacketContent.String())
 
 	err = os.WriteFile(tempSuricataYamlPath, []byte(updatedContent), 0644)
 	if err != nil {
@@ -84,34 +103,45 @@ func updateSuricataConfig(iface string) error {
 		return fmt.Errorf("error writing to temp-suricata.yaml: %v", err)
 	}
 
-	slog.Info("Updated Suricata config with network interface",
-		"interface", iface,
+	slog.Info("Updated Suricata config with network interfaces",
+		"interfaces", interfaces,
 		"path", tempSuricataYamlPath)
 	return nil
 }
 
-func ReceiverFunc(ctx context.Context, ch *Channels, iface string) error {
-	var err error
-	if iface == "" {
-		iface, err = getFirstNonLoopbackInterface()
+// ReceiverFunc processes network interfaces and configures Suricata
+func ReceiverFunc(ctx context.Context, ch *Channels, interfaces []string) error {
+	// If the list is empty, fetch all possible non-loopback interfaces
+	if len(interfaces) == 0 {
+		availableInterfaces, err := getAllNonLoopbackInterfaces()
 		if err != nil {
-			slog.Error("Failed to find suitable network interface", "error", err)
-			return fmt.Errorf("failed to find suitable network interface: %v", err)
+			slog.Error("Failed to find available network interfaces", "error", err)
+			return fmt.Errorf("failed to find suitable network interfaces: %v", err)
 		}
+		interfaces = availableInterfaces
+		slog.Info("Discovered non-loopback interfaces", "interfaces", interfaces)
 	}
-	slog.Info("Using network interface", "interface", iface)
+
+	slog.Info("Using network interfaces", "interfaces", interfaces)
 
 	if err := copySuricataConfig(); err != nil {
 		slog.Error("Failed to copy Suricata config", "error", err)
 		return fmt.Errorf("failed to copy suricata config: %v", err)
 	}
 
-	if err := updateSuricataConfig(iface); err != nil {
+	// Update Suricata config with dynamically generated af-packet section
+	if err := updateSuricataConfig(interfaces); err != nil {
 		slog.Error("Failed to update Suricata config", "error", err)
 		return fmt.Errorf("failed to update suricata config: %v", err)
 	}
 
-	cmd := exec.Command("stdbuf", "-oL", "suricata", "-c", tempSuricataYamlPath, "-i", iface)
+	// Prepare command with multiple `-i` options
+	cmdArgs := []string{"-oL", "suricata", "-c", tempSuricataYamlPath}
+	for _, iface := range interfaces {
+		cmdArgs = append(cmdArgs, "-i", iface)
+	}
+
+	cmd := exec.Command("stdbuf", cmdArgs...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		slog.Error("Failed to create stdout pipe", "error", err)
@@ -130,7 +160,7 @@ func ReceiverFunc(ctx context.Context, ch *Channels, iface string) error {
 	}()
 
 	slog.Info("Started Suricata process",
-		"interface", iface,
+		"interfaces", interfaces,
 		"config_path", tempSuricataYamlPath)
 
 	scanner := bufio.NewScanner(stdout)
@@ -154,4 +184,26 @@ func ReceiverFunc(ctx context.Context, ch *Channels, iface string) error {
 	}
 
 	return nil
+}
+
+// Get all non-loopback interfaces
+func getAllNonLoopbackInterfaces() ([]string, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		slog.Error("Failed to get network interfaces", "error", err)
+		return nil, err
+	}
+
+	var nonLoopbackInterfaces []string
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagLoopback == 0 && iface.Flags&net.FlagUp != 0 {
+			nonLoopbackInterfaces = append(nonLoopbackInterfaces, iface.Name)
+		}
+	}
+
+	if len(nonLoopbackInterfaces) == 0 {
+		return nil, fmt.Errorf("no suitable network interface found")
+	}
+
+	return nonLoopbackInterfaces, nil
 }
